@@ -13,7 +13,7 @@
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const OUTPUT_DIR = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
@@ -55,5 +55,14 @@ if (codePoints < 1 || codePoints > 1000 || !/\S/.test(POEM)) {
 }
 
 mkdirSync(OUTPUT_DIR, { recursive: true });
-writeFileSync(join(OUTPUT_DIR, 'entry.txt'), POEM);
-process.stdout.write(`agency poem: wrote ${join(OUTPUT_DIR, 'entry.txt')} (${codePoints} of 1000 characters)\n`);
+const entryPath = join(OUTPUT_DIR, 'entry.txt');
+writeFileSync(entryPath, POEM);
+
+// The judge reads exactly the bytes in the file, so prove they are the poem's: read them back and
+// compare, character for character, before calling the run done.
+const written = readFileSync(entryPath, 'utf8');
+if (written !== POEM) {
+  process.stderr.write('agency poem: the file on disk is not the poem: refusing to call this run done\n');
+  process.exit(1);
+}
+process.stdout.write(`agency poem: wrote ${entryPath} (${codePoints} of 1000 characters, verified on disk)\n`);
